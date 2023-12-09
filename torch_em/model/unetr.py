@@ -39,7 +39,20 @@ class UNETR(nn.Module):
                 encoder_state = torch.load(checkpoint)
 
         elif backbone == "mae":
-            encoder_state = torch.load(checkpoint)
+            encoder_state = torch.load(checkpoint)["model"]
+
+        # 1. Resize the dimension of the positional embedding
+        original_pos_embed = encoder_state["pos_embed"]
+        original_size = original_pos_embed.size(1)
+        
+        new_size = 4097
+        new_pos_embed = torch.randn(1, new_size, 1024)
+        new_pos_embed[:, :original_size, :] = original_pos_embed
+        encoder_state["pos_embed"] = new_pos_embed
+
+        # 2. map the head weights to their expected names
+        encoder_state["head.weight"] = encoder_state["decoder_pred.weight"]
+        encoder_state["head.bias"] = encoder_state["decoder_pred.bias"]
 
         self.encoder.load_state_dict(encoder_state)
 
